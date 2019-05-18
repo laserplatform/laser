@@ -1,0 +1,58 @@
+syntax = "proto3";
+package Laser;
+// Registering a container to controller.
+message Null {
+    int32 stub=1;
+}
+message ContainerInfo {
+    string ID=1;
+}
+
+message DataChunk{ 
+    bytes Content=1;
+}
+
+message AppCommand{
+    enum CommandType{
+        // The heart-beat packet sent periodly.
+        // If heartbeat broken, the application is thought to be crashed.
+        // Payload: DInt=A payload index. Pong-back must have the same index.
+        HEARTBEAT=0;
+        // Indicates that container can start the initialization job. A READY packet is sent back when initialization is done.
+        // Payload: Nothing.
+        START=1;
+        // Soft-termination request.
+        // After this request, container will handle remaining requests and automatically quit.
+        // Payload: Nothing.
+        SOFT_TERMINATE=2;
+        // Indicates that container has finished all tasks and will quit now.
+        // Payload: Nothing
+        SOFT_TERMINATED=3;
+        // After this request, container will stop now.
+        // Why is the signal here?
+        // Payload: Nothing
+        HARD_TERMINATE=4;
+        // The application is to crash.
+        // Why is the signal here?
+        APP_CRASH=5;
+    }
+    CommandType Type=1;
+    string Payload=2;
+}
+message AppRequestChunk{
+    int64 ID=1;
+    bytes Content=2;
+}
+
+service FaaSRunner{
+    // Invoke after registering the container to the runner.
+    // This means LaserContainer service is ready via the unix socket.
+    rpc startContainer(stream AppCommand) returns (stream AppCommand);
+}
+
+// The LaserContainer service.
+// Runner connects to the unix socket.
+service LaserContainer{
+    rpc startFunction(stream AppCommand) returns (stream AppCommand);
+    rpc functionInvoke(DataChunk) returns (stream DataChunk);
+}

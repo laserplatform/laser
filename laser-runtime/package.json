@@ -1,0 +1,17 @@
+{
+  "name": "laser-runtime",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.5.1",
+    "bluebird": "^3.5.4",
+    "grpc": "^1.20.3",
+    "uuid": "^3.3.2"
+  }
+}
