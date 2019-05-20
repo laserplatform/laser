@@ -15,7 +15,7 @@ module.exports=function(command, args, envs, input){
 			//console.log(pipes);
 			const ps=child_process.spawn(command, args, {
 				env: envs?Object.assign({}, process.env, envs):process.env, 
-				"encoding": buffer, 
+				"encoding": "buffer", 
 				"detached": true,
 				"stdio": [stdin_source, "pipe", "pipe"]
 			});

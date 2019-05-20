@@ -18,27 +18,37 @@
 			"bounding": [
 				"CAP_AUDIT_WRITE",
 				"CAP_KILL",
-				"CAP_NET_BIND_SERVICE"
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SETUID",
+				"CAP_SETGID"
 			],
 			"effective": [
 				"CAP_AUDIT_WRITE",
 				"CAP_KILL",
-				"CAP_NET_BIND_SERVICE"
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SETUID",
+				"CAP_SETGID"
 			],
 			"inheritable": [
 				"CAP_AUDIT_WRITE",
 				"CAP_KILL",
-				"CAP_NET_BIND_SERVICE"
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SETUID",
+				"CAP_SETGID"
 			],
 			"permitted": [
 				"CAP_AUDIT_WRITE",
 				"CAP_KILL",
-				"CAP_NET_BIND_SERVICE"
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SETUID",
+				"CAP_SETGID"
 			],
 			"ambient": [
 				"CAP_AUDIT_WRITE",
 				"CAP_KILL",
-				"CAP_NET_BIND_SERVICE"
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SETUID",
+				"CAP_SETGID"
 			]
 		},
 		"rlimits": [
@@ -62,6 +72,12 @@
                         "source": "/ipc/${uid}/",
                         "options": ["ro", "rbind"]
                 },
+				{
+						"destination": "/sidecar",
+                        "type": "none",
+                        "source": "/opt/laser/laser-runtime",
+                        "options": ["ro", "rbind"]
+				},
 		{
 			"destination": "/proc",
 			"type": "proc",

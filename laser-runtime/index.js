@@ -6,7 +6,9 @@ const packageDef=protoLoader.loadSync(PROTO_PATH, {"keepCase": true, "longs": Bi
 const UUID=require('uuid/v4');
 const bluebird=require('bluebird');
 const fs=require('fs');
+const path=require('path');
 bluebird.promisifyAll(fs);
+const process=require('process');
 const proto=grpc.loadPackageDefinition(packageDef).Laser;
 // Register the runtime and fetch a task.
 //    rpc fetchTask(TaskRequest) returns (stream AppData);
@@ -14,39 +16,30 @@ const proto=grpc.loadPackageDefinition(packageDef).Laser;
 //    rpc taskStarted(stream AppRequestChunk) returns (stream AppResponseChunk);
 let service_started=false;
 let function_handler=null;
-async function createContainer(){
-    // TODO: call the runC to create a container with some secret.
-    let uuid=UUID();
-    console.log("Debug: a container called "+uuid+"  has been created.");
-    container_cache[uuid]={
-        "state": "starting",
-    };
-    const wait_for_register=new Promise((resolve)=>{
-        container_cache[uuid]["waiter"]=resolve;
-    });
-    await wait_for_register;
 
-}
 let shutting_down=0;
 let runner;
 function onRegister(call){
 //    if(container_cache[])
     // Service link is created.
-    call.once("data", async function(data){
-        if(data.CommandType=="READY"){
+    call.on("data", async function(data){
+        console.log(data);
+        if(data.Type=="START"){
+            if(service_started) return;
             const fork = require('child_process').fork;
-            const program = path.resolve('runner.js');
+            const program = path.resolve('sidecar.js');
             const parameters = [];
             const options = {
-                stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
+                stdio: [ 'ignore', 'inherit', 'inherit', 'ipc' ]
             };
             runner=fork(program, parameters, options);
             runner.on("exit", function(code){
                 if(!shutting_down){
-                    call.write({"CommandType":"APP_CRASH", "Payload": ""});
-                    exit(1);
+                    call.write({"Type":"APP_CRASH", "Payload": ""});
+                    process.exit(1);
                 }
             });
+            //console.log("wait 4 msg");
             const wait_for_loading=new Promise((resolve)=>{
                 runner.once("message", function(msg){
                     console.log(msg);
@@ -55,13 +48,15 @@ function onRegister(call){
             });
             await wait_for_loading;
             service_started=true;
-            call.write({"CommandType": "READY", "Payload": ""});
+            call.write({"Type": "START", "Payload": "ready"});
         }else
-        if(data.CommandType=="HEARTBEAT"){
-            call.write({"CommandType": "HEARTBEAT", "Payload": data.Payload});
+        if(data.Type=="HEARTBEAT"){
+            call.write({"Type": "HEARTBEAT", "Payload": data.Payload});
         }
     });
-    
+    call.on('close', function(){
+        process.exit(1);
+    });
 }
 
 
@@ -69,13 +64,16 @@ function onRegister(call){
 // it is ensured by host scheduler that one task a time.
 async function onInvoke(call, callback){
     if(service_started){
+        //console.log(call.request.Content)
         runner.send(call.request.Content);
         const wait_for_output=new Promise((resolve)=>{
             runner.once("message", function(msg){
                 resolve(msg);
             });
         });
-        call.write({"Content":await wait_for_output});
+        const data=await wait_for_output;
+        //console.log(data);
+        call.write({"Content":data});
     }
     call.end();
 }
@@ -83,15 +81,8 @@ async function onInvoke(call, callback){
 function main(){
     const server=new grpc.Server();
     server.addService(proto.LaserContainer.service, {"startFunction": onRegister, "functionInvoke": onInvoke});
-    const passphrase=UUID();
-    fs.appendFileSync("/task/trigger", passphrase); // Block the server here to send passphrase;
     server.bind("0.0.0.0:8000", grpc.ServerCredentials.createInsecure());
     server.start();
-    const pong=fs.readFileSync("/task/trigger", "utf-8");
-    if(pong!=passphrase){
-        console.log("Passphrase ping-pong failed! Exiting...");
-        process.exit(1);
-    }
 }
 
 
